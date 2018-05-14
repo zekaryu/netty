@@ -307,14 +307,14 @@ public class CipherSuiteConverterTest {
         testUnknownJavaCiphersToOpenSSL("");
     }
 
-    private static void testUnknownOpenSSLCiphersToJava(String openSslCipherSuite) {
+    private void testUnknownOpenSSLCiphersToJava(String openSslCipherSuite) {
         CipherSuiteConverter.clearCache();
 
         assertNull(CipherSuiteConverter.toJava(openSslCipherSuite, "TLS"));
         assertNull(CipherSuiteConverter.toJava(openSslCipherSuite, "SSL"));
     }
 
-    private static void testUnknownJavaCiphersToOpenSSL(String javaCipherSuite) {
+    private void testUnknownJavaCiphersToOpenSSL(String javaCipherSuite) {
         CipherSuiteConverter.clearCache();
 
         assertNull(CipherSuiteConverter.toOpenSsl(javaCipherSuite));

@@ -78,9 +78,9 @@ public final class PlatformDependent {
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
-    private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
+    private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean DIRECT_BUFFER_PREFERRED =
-            UNSAFE_UNAVAILABILITY_CAUSE == null && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+            HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
@@ -249,14 +249,14 @@ public final class PlatformDependent {
      * direct memory access.
      */
     public static boolean hasUnsafe() {
-        return UNSAFE_UNAVAILABILITY_CAUSE == null;
+        return HAS_UNSAFE;
     }
 
     /**
      * Return the reason (if any) why {@code sun.misc.Unsafe} was not available.
      */
     public static Throwable getUnsafeUnavailabilityCause() {
-        return UNSAFE_UNAVAILABILITY_CAUSE;
+        return PlatformDependent0.getUnsafeUnavailabilityCause();
     }
 
     /**
@@ -965,43 +965,36 @@ public final class PlatformDependent {
         return "root".equals(username) || "toor".equals(username);
     }
 
-    private static Throwable unsafeUnavailabilityCause0() {
+    private static boolean hasUnsafe0() {
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
-            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
+            return false;
         }
-        Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
-        if (cause != null) {
-            return cause;
+
+        if (PlatformDependent0.isExplicitNoUnsafe()) {
+            return false;
         }
 
         try {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
-            return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
+            return hasUnsafe;
         } catch (Throwable t) {
             logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
-            return new UnsupportedOperationException("Could not determine if Unsafe is available", t);
+            return false;
         }
     }
 
     private static long maxDirectMemory0() {
         long maxDirectMemory = 0;
-
         ClassLoader systemClassLoader = null;
         try {
+            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
             systemClassLoader = getSystemClassLoader();
-
-            // On z/OS we should not use VM.maxDirectMemory() as it not reflects the correct value.
-            // See:
-            //  - https://github.com/netty/netty/issues/7654
-            if (!SystemPropertyUtil.get("os.name", "").toLowerCase().contains("z/os")) {
-                // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
-                Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
-                Method m = vmClass.getDeclaredMethod("maxDirectMemory");
-                maxDirectMemory = ((Number) m.invoke(null)).longValue();
-            }
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
+            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+            maxDirectMemory = ((Number) m.invoke(null)).longValue();
         } catch (Throwable ignored) {
             // Ignore
         }

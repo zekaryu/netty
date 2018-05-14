@@ -48,9 +48,19 @@ public final class StringUtil {
 
     static {
         // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
-        for (int i = 0; i < BYTE2HEX_PAD.length; i++) {
+        int i;
+        for (i = 0; i < 10; i++) {
+            BYTE2HEX_PAD[i] = "0" + i;
+            BYTE2HEX_NOPAD[i] = String.valueOf(i);
+        }
+        for (; i < 16; i++) {
+            char c = (char) ('a' + i - 10);
+            BYTE2HEX_PAD[i] = "0" + c;
+            BYTE2HEX_NOPAD[i] = String.valueOf(c);
+        }
+        for (; i < BYTE2HEX_PAD.length; i++) {
             String str = Integer.toHexString(i);
-            BYTE2HEX_PAD[i] = i > 0xf ? str : ('0' + str);
+            BYTE2HEX_PAD[i] = str;
             BYTE2HEX_NOPAD[i] = str;
         }
     }
@@ -216,10 +226,10 @@ public final class StringUtil {
             return c - '0';
         }
         if (c >= 'A' && c <= 'F') {
-            return c - ('A' - 0xA);
+            return c - 'A' + 0xA;
         }
         if (c >= 'a' && c <= 'f') {
-            return c - ('a' - 0xA);
+            return c - 'a' + 0xA;
         }
         return -1;
     }

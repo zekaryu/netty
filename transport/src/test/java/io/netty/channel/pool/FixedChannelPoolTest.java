@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -97,15 +98,6 @@ public class FixedChannelPoolTest {
 
     @Test(expected = TimeoutException.class)
     public void testAcquireTimeout() throws Exception {
-        testAcquireTimeout(500);
-    }
-
-    @Test(expected = TimeoutException.class)
-    public void testAcquireWithZeroTimeout() throws Exception {
-        testAcquireTimeout(0);
-    }
-
-    private static void testAcquireTimeout(long timeoutMillis) throws Exception {
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -126,7 +118,7 @@ public class FixedChannelPoolTest {
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(cb, handler, ChannelHealthChecker.ACTIVE,
-                                                AcquireTimeoutAction.FAIL, timeoutMillis, 1, Integer.MAX_VALUE);
+                                                 AcquireTimeoutAction.FAIL, 500, 1, Integer.MAX_VALUE);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         Future<Channel> future = pool.acquire();

@@ -34,130 +34,39 @@ import static org.mockito.Mockito.*;
 public class HttpProxyHandlerTest {
 
     @Test
-    public void testHostname() throws Exception {
-        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 8080);
-        testInitialMessage(
-                socketAddress,
-                "localhost:8080",
-                "localhost:8080",
-                null,
-                true);
-    }
-
-    @Test
-    public void testHostnameUnresolved() throws Exception {
-        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 8080);
-        testInitialMessage(
-                socketAddress,
-                "localhost:8080",
-                "localhost:8080",
-                null,
-                true);
-    }
-
-    @Test
-    public void testHostHeaderWithHttpDefaultPort() throws Exception {
-        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 80);
-        testInitialMessage(socketAddress,
-                "localhost:80",
-                "localhost:80", null,
-                false);
-    }
-
-    @Test
-    public void testHostHeaderWithHttpDefaultPortIgnored() throws Exception {
-        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 80);
-        testInitialMessage(
-                socketAddress,
-                "localhost:80",
-                "localhost",
-                null,
-                true);
-    }
-
-    @Test
-    public void testHostHeaderWithHttpsDefaultPort() throws Exception {
-        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 443);
-        testInitialMessage(
-                socketAddress,
-                "localhost:443",
-                "localhost:443",
-                null,
-                false);
-    }
-
-    @Test
-    public void testHostHeaderWithHttpsDefaultPortIgnored() throws Exception {
-        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 443);
-        testInitialMessage(
-                socketAddress,
-                "localhost:443",
-                "localhost",
-                null,
-                true);
-    }
-
-    @Test
-    public void testIpv6() throws Exception {
+    public void testIpv6() throws Exception  {
         InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("::1"), 8080);
-        testInitialMessage(
-                socketAddress,
-                "[::1]:8080",
-                "[::1]:8080",
-                null,
-                true);
+        testInitialMessage(socketAddress, "[::1]:8080", null);
     }
 
     @Test
-    public void testIpv6Unresolved() throws Exception {
+    public void testIpv6Unresolved() throws Exception  {
         InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("::1", 8080);
-        testInitialMessage(
-                socketAddress,
-                "[::1]:8080",
-                "[::1]:8080",
-                null,
-                true);
+        testInitialMessage(socketAddress, "[::1]:8080", null);
     }
 
     @Test
-    public void testIpv4() throws Exception {
+    public void testIpv4() throws Exception  {
         InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("10.0.0.1"), 8080);
-        testInitialMessage(socketAddress,
-                "10.0.0.1:8080",
-                "10.0.0.1:8080",
-                null,
-                true);
+        testInitialMessage(socketAddress, "10.0.0.1:8080", null);
     }
 
     @Test
-    public void testIpv4Unresolved() throws Exception {
+    public void testIpv4Unresolved() throws Exception  {
         InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
-        testInitialMessage(
-                socketAddress,
-                "10.0.0.1:8080",
-                "10.0.0.1:8080",
-                null,
-                true);
+        testInitialMessage(socketAddress, "10.0.0.1:8080", null);
     }
 
     @Test
     public void testCustomHeaders() throws Exception {
         InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
-        testInitialMessage(
-                socketAddress,
-                "10.0.0.1:8080",
-                "10.0.0.1:8080",
-                new DefaultHttpHeaders()
-                        .add("CUSTOM_HEADER", "CUSTOM_VALUE1")
-                        .add("CUSTOM_HEADER", "CUSTOM_VALUE2"),
-                true);
+        testInitialMessage(socketAddress, "10.0.0.1:8080",
+                           new DefaultHttpHeaders().add("CUSTOM_HEADER", "CUSTOM_VALUE1")
+                                                   .add("CUSTOM_HEADER", "CUSTOM_VALUE2"));
     }
 
-    private static void testInitialMessage(InetSocketAddress socketAddress,
-                                           String expectedUrl,
-                                           String expectedHostHeader,
-                                           HttpHeaders headers,
-                                           boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
+    private static void testInitialMessage(InetSocketAddress socketAddress, String hostPort,
+                                           HttpHeaders headers) throws Exception  {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
         ChannelPromise promise = mock(ChannelPromise.class);
@@ -166,18 +75,15 @@ public class HttpProxyHandlerTest {
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(promise);
 
-        HttpProxyHandler handler = new HttpProxyHandler(
-                new InetSocketAddress(NetUtil.LOCALHOST, 8080),
-                headers,
-                ignoreDefaultPortsInConnectHostHeader);
+        HttpProxyHandler handler = new HttpProxyHandler(new InetSocketAddress(NetUtil.LOCALHOST, 8080), headers);
         handler.connect(ctx, socketAddress, null, promise);
 
         FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx);
         try {
             assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
-            assertEquals(expectedUrl, request.uri());
+            assertEquals(hostPort, request.uri());
             HttpHeaders actualHeaders = request.headers();
-            assertEquals(expectedHostHeader, actualHeaders.get(HttpHeaderNames.HOST));
+            assertEquals(hostPort, actualHeaders.get(HttpHeaderNames.HOST));
 
             if (headers != null) {
                 // The actual request header is a strict superset of the custom header

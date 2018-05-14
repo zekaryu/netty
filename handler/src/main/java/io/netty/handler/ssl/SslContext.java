@@ -998,7 +998,7 @@ public abstract class SslContext {
     static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        KeyStore ks = KeyStore.getInstance("JKS");
         ks.load(null, null);
         ks.setKeyEntry("key", key, keyPasswordChars, certChain);
         return ks;
@@ -1040,7 +1040,7 @@ public abstract class SslContext {
                 return KeyFactory.getInstance("DSA").generatePrivate(encodedKeySpec);
             } catch (InvalidKeySpecException ignore2) {
                 try {
-                    return KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
+                    return  KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
                 } catch (InvalidKeySpecException e) {
                     throw new InvalidKeySpecException("Neither RSA, DSA nor EC worked", e);
                 }
@@ -1107,7 +1107,7 @@ public abstract class SslContext {
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        KeyStore ks = KeyStore.getInstance("JKS");
         ks.load(null, null);
 
         int i = 1;
@@ -1146,7 +1146,11 @@ public abstract class SslContext {
                                                     KeyManagerFactory kmf)
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
-        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf);
+        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        if (algorithm == null) {
+            algorithm = "SunX509";
+        }
+        return buildKeyManagerFactory(certChain, algorithm, key, keyPassword, kmf);
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,

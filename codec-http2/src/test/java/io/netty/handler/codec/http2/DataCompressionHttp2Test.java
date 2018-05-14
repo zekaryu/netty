@@ -347,7 +347,7 @@ public class DataCompressionHttp2Test {
                 p.addLast(clientHandler);
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
+                        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);
                         }

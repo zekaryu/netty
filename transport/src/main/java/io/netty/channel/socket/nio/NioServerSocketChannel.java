@@ -200,10 +200,4 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
             clearReadPending();
         }
     }
-
-    // Override just to to be able to call directly via unit tests.
-    @Override
-    protected boolean closeOnReadError(Throwable cause) {
-        return super.closeOnReadError(cause);
-    }
 }

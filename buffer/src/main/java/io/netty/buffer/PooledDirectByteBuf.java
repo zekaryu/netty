@@ -190,7 +190,17 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         if (length == 0) {
             return;
         }
-        ByteBufUtil.readBytes(alloc(), internal ? internalNioBuffer() : memory.duplicate(), idx(index), length, out);
+
+        byte[] tmp = new byte[length];
+        ByteBuffer tmpBuf;
+        if (internal) {
+            tmpBuf = internalNioBuffer();
+        } else {
+            tmpBuf = memory.duplicate();
+        }
+        tmpBuf.clear().position(idx(index));
+        tmpBuf.get(tmp);
+        out.write(tmp);
     }
 
     @Override

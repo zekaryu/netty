@@ -141,13 +141,11 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
     @Override
     public ByteBuf slice(int index, int length) {
-        ensureAccessible();
         // All reference count methods should be inherited from this object (this is the "parent").
         return new PooledNonRetainedSlicedByteBuf(this, unwrap(), index, length);
     }
 
     final ByteBuf duplicate0() {
-        ensureAccessible();
         // All reference count methods should be inherited from this object (this is the "parent").
         return new PooledNonRetainedDuplicateByteBuf(this, unwrap());
     }
@@ -201,7 +199,6 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf duplicate() {
-            ensureAccessible();
             return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, this);
         }
 
@@ -212,7 +209,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
+            checkIndex0(index, length);
             return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), index, length);
         }
 
@@ -278,7 +275,6 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf duplicate() {
-            ensureAccessible();
             return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap())
                     .setIndex(idx(readerIndex()), idx(writerIndex()));
         }
@@ -290,7 +286,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
+            checkIndex0(index, length);
             return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(index), length);
         }
 

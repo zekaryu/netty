@@ -116,10 +116,6 @@ public final class EmptyPriorityQueue<T> implements PriorityQueue<T> {
     }
 
     @Override
-    public void clearIgnoringIndexes() {
-    }
-
-    @Override
     public boolean equals(Object o) {
         return o instanceof PriorityQueue && ((PriorityQueue) o).isEmpty();
     }

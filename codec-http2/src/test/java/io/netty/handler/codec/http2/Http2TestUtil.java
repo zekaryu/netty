@@ -35,7 +35,6 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static java.lang.Math.min;
 
 /**
  * Utilities for the integration tests.
@@ -249,13 +248,13 @@ public final class Http2TestUtil {
                 }
 
                 @Override
-                public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+                public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
                     listener.onPingRead(ctx, data);
                     latch.countDown();
                 }
 
                 @Override
-                public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+                public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
                     listener.onPingAckRead(ctx, data);
                     latch.countDown();
                 }
@@ -384,13 +383,13 @@ public final class Http2TestUtil {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             listener.onPingRead(ctx, data);
             messageLatch.countDown();
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
             listener.onPingAckRead(ctx, data);
             messageLatch.countDown();
         }
@@ -470,40 +469,5 @@ public final class Http2TestUtil {
                 return promise;
             }
         };
-    }
-
-    static final class TestStreamByteDistributorStreamState implements StreamByteDistributor.StreamState {
-        private final Http2Stream stream;
-        boolean isWriteAllowed;
-        long pendingBytes;
-        boolean hasFrame;
-
-        TestStreamByteDistributorStreamState(Http2Stream stream, long pendingBytes, boolean hasFrame,
-                                             boolean isWriteAllowed) {
-            this.stream = stream;
-            this.isWriteAllowed = isWriteAllowed;
-            this.pendingBytes = pendingBytes;
-            this.hasFrame = hasFrame;
-        }
-
-        @Override
-        public Http2Stream stream() {
-            return stream;
-        }
-
-        @Override
-        public long pendingBytes() {
-            return pendingBytes;
-        }
-
-        @Override
-        public boolean hasFrame() {
-            return hasFrame;
-        }
-
-        @Override
-        public int windowSize() {
-            return isWriteAllowed ? (int) min(pendingBytes, Integer.MAX_VALUE) : -1;
-        }
     }
 }

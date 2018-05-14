@@ -25,7 +25,6 @@ import io.netty.util.internal.PriorityQueueNode;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -355,6 +354,13 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     /**
      * For testing only!
      */
+    int streamableBytes0(Http2Stream stream) {
+        return state(stream).streamableBytes;
+    }
+
+    /**
+     * For testing only!
+     */
     boolean isChild(int childId, int parentId, short weight) {
         State parent = state(parentId);
         State child;
@@ -393,9 +399,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      *     <li>Stream ID (higher stream ID is higher priority - used for tie breaker)</li>
      * </ul>
      */
-    private static final class StateOnlyComparator implements Comparator<State>, Serializable {
-        private static final long serialVersionUID = -4806936913002105966L;
-
+    private static final class StateOnlyComparator implements Comparator<State> {
         static final StateOnlyComparator INSTANCE = new StateOnlyComparator();
 
         private StateOnlyComparator() {
@@ -422,9 +426,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         }
     }
 
-    private static final class StatePseudoTimeComparator implements Comparator<State>, Serializable {
-        private static final long serialVersionUID = -1437548640227161828L;
-
+    private static final class StatePseudoTimeComparator implements Comparator<State> {
         static final StatePseudoTimeComparator INSTANCE = new StatePseudoTimeComparator();
 
         private StatePseudoTimeComparator() {

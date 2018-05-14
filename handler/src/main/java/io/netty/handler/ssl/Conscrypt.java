@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -27,38 +26,44 @@ import java.lang.reflect.Method;
 final class Conscrypt {
     // This class exists to avoid loading other conscrypt related classes using features only available in JDK8+,
     // because we need to maintain JDK6+ runtime compatibility.
-    private static final Method IS_CONSCRYPT_SSLENGINE = loadIsConscryptEngine();
+    private static final Class<?> ENGINES_CLASS = getEnginesClass();
 
-    private static Method loadIsConscryptEngine() {
+    /**
+     * Indicates whether or not conscrypt is available on the current system.
+     */
+    static boolean isAvailable() {
+        return ENGINES_CLASS != null && PlatformDependent.javaVersion() >= 8;
+    }
+
+    static boolean isEngineSupported(SSLEngine engine) {
+        return isAvailable() && isConscryptEngine(engine, ENGINES_CLASS);
+    }
+
+    private static Class<?> getEnginesClass() {
         try {
-            Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
+            // Always use bootstrap class loader.
+            Class<?> engineClass = Class.forName("org.conscrypt.Conscrypt$Engines", true,
                     ConscryptAlpnSslEngine.class.getClassLoader());
-            return conscryptClass.getMethod("isConscrypt", SSLEngine.class);
+            // Ensure that it also has the isConscrypt method.
+            getIsConscryptMethod(engineClass);
+            return engineClass;
         } catch (Throwable ignore) {
             // Conscrypt was not loaded.
             return null;
         }
     }
 
-    /**
-     * Indicates whether or not conscrypt is available on the current system.
-     */
-    static boolean isAvailable() {
-        return IS_CONSCRYPT_SSLENGINE != null && PlatformDependent.javaVersion() >= 8;
-    }
-
-    static boolean isEngineSupported(SSLEngine engine) {
-        return isAvailable() && isConscryptEngine(engine);
-    }
-
-    private static boolean isConscryptEngine(SSLEngine engine) {
+    private static boolean isConscryptEngine(SSLEngine engine, Class<?> enginesClass) {
         try {
-            return (Boolean) IS_CONSCRYPT_SSLENGINE.invoke(null, engine);
-        } catch (IllegalAccessException ignore) {
+            Method method = getIsConscryptMethod(enginesClass);
+            return (Boolean) method.invoke(null, engine);
+        } catch (Throwable ignore) {
             return false;
-        } catch (InvocationTargetException ex) {
-            throw new RuntimeException(ex);
         }
+    }
+
+    private static Method getIsConscryptMethod(Class<?> enginesClass) throws NoSuchMethodException {
+        return enginesClass.getMethod("isConscrypt", SSLEngine.class);
     }
 
     private Conscrypt() { }

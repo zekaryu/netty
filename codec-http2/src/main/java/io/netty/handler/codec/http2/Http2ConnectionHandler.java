@@ -200,9 +200,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             encoder.flowController().writePendingBytes();
             ctx.flush();
         } catch (Http2Exception e) {
-            onError(ctx, true, e);
+            onError(ctx, e);
         } catch (Throwable cause) {
-            onError(ctx, true, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
+            onError(ctx, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
         }
     }
 
@@ -233,7 +233,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private ByteBuf clientPrefaceString;
         private boolean prefaceSent;
 
-        public PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
+        public PrefaceDecoder(ChannelHandlerContext ctx) {
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.
@@ -254,7 +254,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     byteDecoder.decode(ctx, in, out);
                 }
             } catch (Throwable e) {
-                onError(ctx, false, e);
+                onError(ctx, e);
             }
         }
 
@@ -357,29 +357,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         /**
          * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
          */
-        private void sendPreface(ChannelHandlerContext ctx) throws Exception {
+        private void sendPreface(ChannelHandlerContext ctx) {
             if (prefaceSent || !ctx.channel().isActive()) {
                 return;
             }
 
             prefaceSent = true;
 
-            final boolean isClient = !connection().isServer();
-            if (isClient) {
+            if (!connection().isServer()) {
                 // Clients must send the preface string as the first bytes on the connection.
                 ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                ctx.fireUserEventTriggered(Http2ConnectionPrefaceWrittenEvent.INSTANCE);
             }
 
             // Both client and server must send their initial settings.
             encoder.writeSettings(ctx, initialSettings, ctx.newPromise()).addListener(
                     ChannelFutureListener.CLOSE_ON_FAILURE);
-
-            if (isClient) {
-                // If this handler is extended by the user and we directly fire the userEvent from this context then
-                // the user will not see the event. We should fire the event starting with this handler so this class
-                // (and extending classes) have a chance to process the event.
-                userEventTriggered(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
-            }
         }
     }
 
@@ -389,7 +382,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             try {
                 decoder.decodeFrame(ctx, in, out);
             } catch (Throwable e) {
-                onError(ctx, false, e);
+                onError(ctx, e);
             }
         }
     }
@@ -538,7 +531,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (getEmbeddedHttp2Exception(cause) != null) {
             // Some exception in the causality chain is an Http2Exception - handle it.
-            onError(ctx, false, cause);
+            onError(ctx, cause);
         } else {
             super.exceptionCaught(ctx, cause);
         }
@@ -604,17 +597,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * Central handler for all exceptions caught during HTTP/2 processing.
      */
     @Override
-    public void onError(ChannelHandlerContext ctx, boolean outbound, Throwable cause) {
+    public void onError(ChannelHandlerContext ctx, Throwable cause) {
         Http2Exception embedded = getEmbeddedHttp2Exception(cause);
         if (isStreamError(embedded)) {
-            onStreamError(ctx, outbound, cause, (StreamException) embedded);
+            onStreamError(ctx, cause, (StreamException) embedded);
         } else if (embedded instanceof CompositeStreamException) {
             CompositeStreamException compositException = (CompositeStreamException) embedded;
             for (StreamException streamException : compositException) {
-                onStreamError(ctx, outbound, cause, streamException);
+                onStreamError(ctx, cause, streamException);
             }
         } else {
-            onConnectionError(ctx, outbound, cause, embedded);
+            onConnectionError(ctx, cause, embedded);
         }
         ctx.flush();
     }
@@ -633,13 +626,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * streams are closed, the connection is shut down.
      *
      * @param ctx the channel context
-     * @param outbound {@code true} if the error was caused by an outbound operation.
      * @param cause the exception that was caught
      * @param http2Ex the {@link Http2Exception} that is embedded in the causality chain. This may
      *            be {@code null} if it's an unknown exception.
      */
-    protected void onConnectionError(ChannelHandlerContext ctx, boolean outbound,
-                                     Throwable cause, Http2Exception http2Ex) {
+    protected void onConnectionError(ChannelHandlerContext ctx, Throwable cause, Http2Exception http2Ex) {
         if (http2Ex == null) {
             http2Ex = new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
         }
@@ -661,12 +652,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * stream.
      *
      * @param ctx the channel context
-     * @param outbound {@code true} if the error was caused by an outbound operation.
      * @param cause the exception that was caught
      * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
-    protected void onStreamError(ChannelHandlerContext ctx, boolean outbound,
-                                 @SuppressWarnings("unused") Throwable cause, StreamException http2Ex) {
+    protected void onStreamError(ChannelHandlerContext ctx, @SuppressWarnings("unused") Throwable cause,
+                                 StreamException http2Ex) {
         final int streamId = http2Ex.streamId();
         Http2Stream stream = connection().stream(streamId);
 
@@ -695,7 +685,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 try {
                     handleServerHeaderDecodeSizeError(ctx, stream);
                 } catch (Throwable cause2) {
-                    onError(ctx, outbound, connectionError(INTERNAL_ERROR, cause2, "Error DecodeSizeError"));
+                    onError(ctx, connectionError(INTERNAL_ERROR, cause2, "Error DecodeSizeError"));
                 }
             }
         }
@@ -870,13 +860,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             closeStream(stream, future);
         } else {
             // The connection will be closed and so no need to change the resetSent flag to false.
-            onConnectionError(ctx, true, future.cause(), null);
+            onConnectionError(ctx, future.cause(), null);
         }
     }
 
     private void closeConnectionOnError(ChannelHandlerContext ctx, ChannelFuture future) {
         if (!future.isSuccess()) {
-            onConnectionError(ctx, true, future.cause(), null);
+            onConnectionError(ctx, future.cause(), null);
         }
     }
 

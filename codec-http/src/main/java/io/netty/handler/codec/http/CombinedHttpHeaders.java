@@ -28,7 +28,6 @@ import java.util.Map;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.internal.StringUtil.COMMA;
-import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 
 /**
  * Will add multiple values for the same header as single header with a comma separated list of values.
@@ -85,19 +84,6 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         }
 
         @Override
-        public Iterator<CharSequence> valueIterator(CharSequence name) {
-            Iterator<CharSequence> itr = super.valueIterator(name);
-            if (!itr.hasNext()) {
-                return itr;
-            }
-            Iterator<CharSequence> unescapedItr = unescapeCsvFields(itr.next()).iterator();
-            if (itr.hasNext()) {
-                throw new IllegalStateException("CombinedHttpHeaders should only have one value");
-            }
-            return unescapedItr;
-        }
-
-        @Override
         public List<CharSequence> getAll(CharSequence name) {
             List<CharSequence> values = super.getAll(name);
             if (values.isEmpty()) {
@@ -106,7 +92,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             if (values.size() != 1) {
                 throw new IllegalStateException("CombinedHttpHeaders should only have one value");
             }
-            return unescapeCsvFields(values.get(0));
+            return StringUtil.unescapeCsvFields(values.get(0));
         }
 
         @Override

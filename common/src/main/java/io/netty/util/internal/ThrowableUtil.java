@@ -18,9 +18,25 @@ package io.netty.util.internal;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
 
 public final class ThrowableUtil {
+
+    private static final Method addSupressedMethod = getAddSuppressed();
+
+    private static Method getAddSuppressed() {
+        if (PlatformDependent.javaVersion() < 7) {
+            return null;
+        }
+        try {
+            // addSuppressed is final, so we only need to look it up on Throwable.
+            return Throwable.class.getDeclaredMethod("addSuppressed", Throwable.class);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private ThrowableUtil() { }
 
@@ -55,15 +71,20 @@ public final class ThrowableUtil {
     }
 
     public static boolean haveSuppressed() {
-        return PlatformDependent.javaVersion() >= 7;
+        return addSupressedMethod != null;
     }
 
-    @SuppressJava6Requirement(reason = "Throwable addSuppressed is only available for >= 7. Has check for < 7.")
     public static void addSuppressed(Throwable target, Throwable suppressed) {
         if (!haveSuppressed()) {
             return;
         }
-        target.addSuppressed(suppressed);
+        try {
+            addSupressedMethod.invoke(target, suppressed);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void addSuppressedAndClear(Throwable target, List<Throwable> suppressed) {

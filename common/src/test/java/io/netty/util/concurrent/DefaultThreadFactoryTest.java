@@ -186,7 +186,7 @@ public class DefaultThreadFactoryTest {
         }
     }
 
-    private static void runStickyThreadGroupTest(
+    private void runStickyThreadGroupTest(
             final Callable<DefaultThreadFactory> callable,
             final ThreadGroup expected) throws InterruptedException {
         final AtomicReference<ThreadGroup> captured = new AtomicReference<ThreadGroup>();

@@ -403,7 +403,7 @@ public final class Snappy {
             if (in.readableBytes() < 2) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedShortLE();
+            length = in.readShortLE();
             break;
         case 62:
             if (in.readableBytes() < 3) {
@@ -495,7 +495,7 @@ public final class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = in.readUnsignedShortLE();
+        int offset = in.readShortLE();
 
         validateOffset(offset, writtenSoFar);
 
@@ -565,7 +565,7 @@ public final class Snappy {
 
     /**
      * Validates that the offset extracted from a compressed reference is within
-     * the permissible bounds of an offset (0 < offset < Integer.MAX_VALUE), and does not
+     * the permissible bounds of an offset (4 <= offset <= 32768), and does not
      * exceed the length of the chunk currently read so far.
      *
      * @param offset The offset extracted from the compressed reference
@@ -573,13 +573,12 @@ public final class Snappy {
      * @throws DecompressionException if the offset is invalid
      */
     private static void validateOffset(int offset, int chunkSizeSoFar) {
-        if (offset == 0) {
-            throw new DecompressionException("Offset is less than minimum permissible value");
+        if (offset > Short.MAX_VALUE) {
+            throw new DecompressionException("Offset exceeds maximum permissible value");
         }
 
-        if (offset < 0) {
-            // Due to arithmetic overflow
-            throw new DecompressionException("Offset is greater than maximum value supported by this implementation");
+        if (offset <= 0) {
+            throw new DecompressionException("Offset is less than minimum permissible value");
         }
 
         if (offset > chunkSizeSoFar) {

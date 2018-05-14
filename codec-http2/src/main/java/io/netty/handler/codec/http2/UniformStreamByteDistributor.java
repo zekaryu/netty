@@ -130,6 +130,13 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     }
 
     /**
+     * For testing only!
+     */
+    int streamableBytes0(Http2Stream stream) {
+        return state(stream).streamableBytes;
+    }
+
+    /**
      * The remote flow control state for a single stream.
      */
     private final class State {

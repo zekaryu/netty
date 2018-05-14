@@ -237,8 +237,6 @@ public class QueryStringDecoderTest {
         URI uri = URI.create("http://localhost:8080/foo?param1=value1&param2=value2&param3=value3");
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         Assert.assertEquals("/foo", decoder.path());
-        Assert.assertEquals("/foo", decoder.rawPath());
-        Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
         Map<String, List<String>> params =  decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
@@ -267,9 +265,6 @@ public class QueryStringDecoderTest {
         URI uri = URI.create("http://localhost:8080/?param1=value1&param2=value2&param3=value3");
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         Assert.assertEquals("/", decoder.path());
-        Assert.assertEquals("/", decoder.rawPath());
-        Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
-
         Map<String, List<String>> params =  decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
@@ -298,9 +293,6 @@ public class QueryStringDecoderTest {
         URI uri = URI.create("http://localhost:8080?param1=value1&param2=value2&param3=value3");
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         Assert.assertEquals("", decoder.path());
-        Assert.assertEquals("", decoder.rawPath());
-        Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
-
         Map<String, List<String>> params =  decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
@@ -329,9 +321,6 @@ public class QueryStringDecoderTest {
         URI uri = URI.create("http://foo.com/images;num=10?query=name;value=123");
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         Assert.assertEquals("/images;num=10", decoder.path());
-        Assert.assertEquals("/images;num=10", decoder.rawPath());
-        Assert.assertEquals("query=name;value=123", decoder.rawQuery());
-
         Map<String, List<String>> params =  decoder.parameters();
         Assert.assertEquals(2, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
@@ -347,18 +336,5 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("123", entry.getValue().get(0));
 
         Assert.assertFalse(entries.hasNext());
-    }
-
-    @Test
-    public void testEmptyStrings() {
-        QueryStringDecoder pathSlash = new QueryStringDecoder("path/");
-        Assert.assertEquals("path/", pathSlash.rawPath());
-        Assert.assertEquals("", pathSlash.rawQuery());
-        QueryStringDecoder pathQuestion = new QueryStringDecoder("path?");
-        Assert.assertEquals("path", pathQuestion.rawPath());
-        Assert.assertEquals("", pathQuestion.rawQuery());
-        QueryStringDecoder empty = new QueryStringDecoder("");
-        Assert.assertEquals("", empty.rawPath());
-        Assert.assertEquals("", empty.rawQuery());
     }
 }

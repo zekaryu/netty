@@ -39,7 +39,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     // GZIP related
     private final ByteBufChecksum crc;
-    private final boolean decompressConcatenated;
 
     private enum GzipState {
         HEADER_START,
@@ -64,7 +63,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
      */
     public JdkZlibDecoder() {
-        this(ZlibWrapper.ZLIB, null, false);
+        this(ZlibWrapper.ZLIB, null);
     }
 
     /**
@@ -73,7 +72,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * supports the preset dictionary.
      */
     public JdkZlibDecoder(byte[] dictionary) {
-        this(ZlibWrapper.ZLIB, dictionary, false);
+        this(ZlibWrapper.ZLIB, dictionary);
     }
 
     /**
@@ -82,22 +81,13 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * supported atm.
      */
     public JdkZlibDecoder(ZlibWrapper wrapper) {
-        this(wrapper, null, false);
+        this(wrapper, null);
     }
 
-    public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated) {
-        this(wrapper, null, decompressConcatenated);
-    }
-
-    public JdkZlibDecoder(boolean decompressConcatenated) {
-        this(ZlibWrapper.GZIP, null, decompressConcatenated);
-    }
-
-    private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated) {
+    private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary) {
         if (wrapper == null) {
             throw new NullPointerException("wrapper");
         }
-        this.decompressConcatenated = decompressConcatenated;
         switch (wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
@@ -217,13 +207,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (readFooter) {
                 gzipState = GzipState.FOOTER_START;
                 if (readGZIPFooter(in)) {
-                    finished = !decompressConcatenated;
-
-                    if (!finished) {
-                        inflater.reset();
-                        crc.reset();
-                        gzipState = GzipState.HEADER_START;
-                    }
+                    finished = true;
                 }
             }
         } catch (DataFormatException e) {

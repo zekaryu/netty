@@ -93,7 +93,6 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         HTML5
     }
 
-    @SuppressWarnings("rawtypes")
     private static final Map.Entry[] percentEncodings;
 
     static {
@@ -780,11 +779,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
         // Now consider size for chunk or not
         long realSize = globalBodySize;
-        if (!isMultipart) {
+        if (isMultipart) {
+            iterator = multipartHttpDatas.listIterator();
+        } else {
             realSize -= 1; // last '&' removed
+            iterator = multipartHttpDatas.listIterator();
         }
-        iterator = multipartHttpDatas.listIterator();
-
         headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(realSize));
         if (realSize > HttpPostBodyUtil.chunkSize || isMultipart) {
             isChunked = true;
@@ -948,11 +948,13 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             isKey = false;
             if (currentBuffer == null) {
                 currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes()));
+                // continue
+                size -= buffer.readableBytes() + 1;
             } else {
                 currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes()));
+                // continue
+                size -= buffer.readableBytes() + 1;
             }
-            // continue
-            size -= buffer.readableBytes() + 1;
             if (currentBuffer.readableBytes() >= HttpPostBodyUtil.chunkSize) {
                 buffer = fillByteBuf();
                 return new DefaultHttpContent(buffer);

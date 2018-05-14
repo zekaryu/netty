@@ -352,8 +352,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
     }
 
     private static final class SkipTestException extends RuntimeException {
-        private static final long serialVersionUID = 9214869217774035223L;
-
         SkipTestException(String message) {
             super(message);
         }

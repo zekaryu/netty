@@ -47,6 +47,7 @@ public abstract class RenegotiateTest {
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider()).build();
+            initSslServerContext(context);
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -124,7 +125,10 @@ public abstract class RenegotiateTest {
             latch.await();
             clientChannel.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();
-            verifyResult(error);
+            Throwable cause = error.get();
+            if (cause != null) {
+                throw cause;
+            }
         } finally  {
             group.shutdownGracefully();
         }
@@ -132,10 +136,6 @@ public abstract class RenegotiateTest {
 
     protected abstract SslProvider serverSslProvider();
 
-    protected void verifyResult(AtomicReference<Throwable> error) throws Throwable {
-        Throwable cause = error.get();
-        if (cause != null) {
-            throw cause;
-        }
+    protected void initSslServerContext(SslContext context) {
     }
 }

@@ -96,14 +96,14 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
     }
 
     @Override
-    protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
+    protected boolean doWriteSingle(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
         Object msg = in.current();
         if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
             // File descriptor was written, so remove it.
             in.remove();
-            return 1;
+            return true;
         }
-        return super.doWriteSingle(in);
+        return super.doWriteSingle(in, writeSpinCount);
     }
 
     @Override

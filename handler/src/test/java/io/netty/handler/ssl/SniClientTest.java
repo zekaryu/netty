@@ -34,7 +34,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
-import javax.net.ssl.SSLException;
+import java.nio.channels.ClosedChannelException;
 
 public class SniClientTest {
 
@@ -67,7 +67,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, true);
     }
 
-    @Test(timeout = 30000, expected = SSLException.class)
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
     public void testSniSNIMatcherDoesNotMatchClientJdkSslServerJdkSsl() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, false);
@@ -80,7 +80,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL, true);
     }
 
-    @Test(timeout = 30000, expected = SSLException.class)
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
     public void testSniSNIMatcherDoesNotMatchClientOpenSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         Assume.assumeTrue(OpenSsl.isAvailable());
@@ -94,7 +94,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.OPENSSL, true);
     }
 
-    @Test(timeout = 30000, expected = SSLException.class)
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
     public void testSniSNIMatcherDoesNotMatchClientJdkSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         Assume.assumeTrue(OpenSsl.isAvailable());
@@ -108,7 +108,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.JDK, true);
     }
 
-    @Test(timeout = 30000, expected = SSLException.class)
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
     public void testSniSNIMatcherDoesNotMatchClientOpenSslServerJdkSsl() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         Assume.assumeTrue(OpenSsl.isAvailable());

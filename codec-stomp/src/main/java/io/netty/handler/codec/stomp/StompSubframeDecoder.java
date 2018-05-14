@@ -196,7 +196,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private StompCommand readCommand(ByteBuf in) {
-        String commandStr = readLine(in, 16);
+        String commandStr = readLine(in, maxLineLength);
         StompCommand command = null;
         try {
             command = StompCommand.valueOf(commandStr);
@@ -218,11 +218,18 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private State readHeaders(ByteBuf buffer, StompHeaders headers) {
-        AppendableCharSequence buf = new AppendableCharSequence(128);
         for (;;) {
-            boolean headerRead = readHeader(headers, buf, buffer);
-            if (!headerRead) {
-                if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
+            String line = readLine(buffer, maxLineLength);
+            if (!line.isEmpty()) {
+                String[] split = line.split(":");
+                if (split.length == 2) {
+                    headers.add(split[0], split[1]);
+                } else if (validateHeaders) {
+                    throw new IllegalArgumentException("a header value or name contains a prohibited character ':'" +
+                            ", " + line);
+                }
+            } else {
+                if (headers.contains(StompHeaders.CONTENT_LENGTH))  {
                     contentLength = getContentLength(headers, 0);
                     if (contentLength == 0) {
                         return State.FINALIZE_FRAME_READ;
@@ -259,69 +266,26 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
     }
 
-    private String readLine(ByteBuf buffer, int initialBufferSize) {
-        AppendableCharSequence buf = new AppendableCharSequence(initialBufferSize);
+    private static String readLine(ByteBuf buffer, int maxLineLength) {
+        AppendableCharSequence buf = new AppendableCharSequence(128);
         int lineLength = 0;
         for (;;) {
             byte nextByte = buffer.readByte();
             if (nextByte == StompConstants.CR) {
-                //do nothing
+                nextByte = buffer.readByte();
+                if (nextByte == StompConstants.LF) {
+                    return buf.toString();
+                }
             } else if (nextByte == StompConstants.LF) {
                 return buf.toString();
             } else {
                 if (lineLength >= maxLineLength) {
-                    invalidLineLength();
+                    throw new TooLongFrameException("An STOMP line is larger than " + maxLineLength + " bytes.");
                 }
                 lineLength ++;
                 buf.append((char) nextByte);
             }
         }
-    }
-
-    private boolean readHeader(StompHeaders headers, AppendableCharSequence buf, ByteBuf buffer) {
-        buf.reset();
-        int lineLength = 0;
-        String key = null;
-        boolean valid = false;
-        for (;;) {
-            byte nextByte = buffer.readByte();
-
-            if (nextByte == StompConstants.COLON && key == null) {
-                key = buf.toString();
-                valid = true;
-                buf.reset();
-            } else if (nextByte == StompConstants.CR) {
-                //do nothing
-            } else if (nextByte == StompConstants.LF) {
-                if (key == null && lineLength == 0) {
-                    return false;
-                } else if (valid) {
-                    headers.add(key, buf.toString());
-                } else if (validateHeaders) {
-                    invalidHeader(key, buf.toString());
-                }
-                return true;
-            } else {
-                if (lineLength >= maxLineLength) {
-                    invalidLineLength();
-                }
-                if (nextByte == StompConstants.COLON && key != null) {
-                    valid = false;
-                }
-                lineLength ++;
-                buf.append((char) nextByte);
-            }
-        }
-    }
-
-    private void invalidHeader(String key, String value) {
-        String line = key != null ? key + ":" + value : value;
-        throw new IllegalArgumentException("a header value or name contains a prohibited character ':'"
-            + ", " + line);
-    }
-
-    private void invalidLineLength() {
-        throw new TooLongFrameException("An STOMP line is larger than " + maxLineLength + " bytes.");
     }
 
     private void resetDecoder() {

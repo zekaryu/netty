@@ -30,20 +30,15 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-
-import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.util.ReferenceCountUtil.release;
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.util.ReferenceCountUtil.*;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
  * <p>
- * This handler can be configured using one or more {@link CorsConfig}, please
+ * This handler can be configured using a {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
  */
 public class CorsHandler extends ChannelDuplexHandler {
@@ -51,43 +46,26 @@ public class CorsHandler extends ChannelDuplexHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";
     private static final String NULL_ORIGIN = "null";
-    private CorsConfig config;
+    private final CorsConfig config;
 
     private HttpRequest request;
-    private final List<CorsConfig> configList;
-    private boolean isShortCircuit;
 
     /**
-     * Creates a new instance with a single {@link CorsConfig}.
+     * Creates a new instance with the specified {@link CorsConfig}.
      */
     public CorsHandler(final CorsConfig config) {
-        this(Collections.singletonList(checkNotNull(config, "config")), config.isShortCircuit());
-    }
-
-    /**
-     * Creates a new instance with the specified config list. If more than one
-     * config matches a certain origin, the first in the List will be used.
-     *
-     * @param configList     List of {@link CorsConfig}
-     * @param isShortCircuit Same as {@link CorsConfig#shortCircuit} but applicable to all supplied configs.
-     */
-    public CorsHandler(final List<CorsConfig> configList, boolean isShortCircuit) {
-        checkNonEmpty(configList, "configList");
-        this.configList = configList;
-        this.isShortCircuit = isShortCircuit;
+        this.config = checkNotNull(config, "config");
     }
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        if (msg instanceof HttpRequest) {
+        if (config.isCorsSupportEnabled() && msg instanceof HttpRequest) {
             request = (HttpRequest) msg;
-            final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
-            config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
                 return;
             }
-            if (isShortCircuit && !(origin == null || config != null)) {
+            if (config.isShortCircuit() && !validateOrigin()) {
                 forbidden(ctx, request);
                 return;
             }
@@ -121,24 +99,9 @@ public class CorsHandler extends ChannelDuplexHandler {
         response.headers().add(config.preflightResponseHeaders());
     }
 
-    private CorsConfig getForOrigin(String requestOrigin) {
-        for (CorsConfig corsConfig : configList) {
-            if (corsConfig.isAnyOriginSupported()) {
-                return corsConfig;
-            }
-            if (corsConfig.origins().contains(requestOrigin)) {
-                return corsConfig;
-            }
-            if (corsConfig.isNullOriginAllowed() || NULL_ORIGIN.equals(requestOrigin)) {
-                return corsConfig;
-            }
-        }
-        return null;
-    }
-
     private boolean setOrigin(final HttpResponse response) {
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null && config != null) {
+        if (origin != null) {
             if (NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed()) {
                 setNullOrigin(response);
                 return true;
@@ -160,6 +123,24 @@ public class CorsHandler extends ChannelDuplexHandler {
             logger.debug("Request origin [{}]] was not among the configured origins [{}]", origin, config.origins());
         }
         return false;
+    }
+
+    private boolean validateOrigin() {
+        if (config.isAnyOriginSupported()) {
+            return true;
+        }
+
+        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        if (origin == null) {
+            // Not a CORS request so we cannot validate it. It may be a non CORS request.
+            return true;
+        }
+
+        if ("null".equals(origin) && config.isNullOriginAllowed()) {
+            return true;
+        }
+
+        return config.origins().contains(origin);
     }
 
     private void echoRequestOrigin(final HttpResponse response) {
@@ -217,14 +198,14 @@ public class CorsHandler extends ChannelDuplexHandler {
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
+        if (config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
                 setAllowCredentials(response);
                 setExposeHeaders(response);
             }
         }
-        ctx.write(msg, promise);
+        ctx.writeAndFlush(msg, promise);
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {

@@ -16,7 +16,6 @@
 
 package io.netty.util.concurrent;
 
-import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.BeforeClass;
@@ -242,24 +241,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    @Test
-    public void signalUncancellableCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
-        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-    }
-
-    @Test
-    public void signalSuccessCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
-        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-    }
-
-    private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
-                                                         boolean runTestInExecutorThread)
+    private void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
+                                                  boolean runTestInExecutorThread)
             throws InterruptedException {
         final Promise<Void>[] p = new DefaultPromise[promiseChainLength];
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
@@ -281,8 +264,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    private static void testStackOverFlowChainedFuturesA(EventExecutor executor, final Promise<Void>[] p,
-                                                         final CountDownLatch latch) {
+    private void testStackOverFlowChainedFuturesA(EventExecutor executor, final Promise<Void>[] p,
+                                                  final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);
@@ -300,8 +283,8 @@ public class DefaultPromiseTest {
         p[0].setSuccess(null);
     }
 
-    private static void testStackOverFlowChainedFuturesB(int promiseChainLength, final EventExecutor executor,
-                                                         boolean runTestInExecutorThread)
+    private void testStackOverFlowChainedFuturesB(int promiseChainLength, final EventExecutor executor,
+                                                  boolean runTestInExecutorThread)
             throws InterruptedException {
         final Promise<Void>[] p = new DefaultPromise[promiseChainLength];
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
@@ -323,8 +306,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    private static void testStackOverFlowChainedFuturesB(EventExecutor executor, final Promise<Void>[] p,
-                                                         final CountDownLatch latch) {
+    private void testStackOverFlowChainedFuturesB(EventExecutor executor, final Promise<Void>[] p,
+                                                  final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);

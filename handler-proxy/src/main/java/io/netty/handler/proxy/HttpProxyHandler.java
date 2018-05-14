@@ -29,11 +29,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -47,7 +47,6 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final String username;
     private final String password;
     private final CharSequence authorization;
-    private final boolean ignoreDefaultPortsInConnectHostHeader;
     private HttpResponseStatus status;
     private HttpHeaders headers;
 
@@ -56,18 +55,11 @@ public final class HttpProxyHandler extends ProxyHandler {
     }
 
     public HttpProxyHandler(SocketAddress proxyAddress, HttpHeaders headers) {
-        this(proxyAddress, headers, false);
-    }
-
-    public HttpProxyHandler(SocketAddress proxyAddress,
-                            HttpHeaders headers,
-                            boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
         username = null;
         password = null;
         authorization = null;
         this.headers = headers;
-        this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
     public HttpProxyHandler(SocketAddress proxyAddress, String username, String password) {
@@ -76,14 +68,6 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     public HttpProxyHandler(SocketAddress proxyAddress, String username, String password,
                             HttpHeaders headers) {
-        this(proxyAddress, username, password, headers, false);
-    }
-
-    public HttpProxyHandler(SocketAddress proxyAddress,
-                            String username,
-                            String password,
-                            HttpHeaders headers,
-                            boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
         if (username == null) {
             throw new NullPointerException("username");
@@ -103,7 +87,6 @@ public final class HttpProxyHandler extends ProxyHandler {
         authzBase64.release();
 
         this.headers = headers;
-        this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
     @Override
@@ -144,20 +127,13 @@ public final class HttpProxyHandler extends ProxyHandler {
     @Override
     protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
         InetSocketAddress raddr = destinationAddress();
-
-        String hostString = HttpUtil.formatHostnameForHttp(raddr);
-        int port = raddr.getPort();
-        String url = hostString + ":" + port;
-        String hostHeader = (ignoreDefaultPortsInConnectHostHeader && (port == 80 || port == 443)) ?
-                hostString :
-                url;
-
+        final String host = NetUtil.toSocketAddressString(raddr);
         FullHttpRequest req = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
-                url,
+                host,
                 Unpooled.EMPTY_BUFFER, false);
 
-        req.headers().set(HttpHeaderNames.HOST, hostHeader);
+        req.headers().set(HttpHeaderNames.HOST, host);
 
         if (authorization != null) {
             req.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authorization);

@@ -144,17 +144,19 @@ public interface Http2FrameListener {
      * Handles an inbound {@code PING} frame.
      *
      * @param ctx the context from the handler where the frame was read.
-     * @param data the payload of the frame.
+     * @param data the payload of the frame. If this buffer needs to be retained by the listener
+     *            they must make a copy.
      */
-    void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception;
+    void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
 
     /**
      * Handles an inbound {@code PING} acknowledgment.
      *
      * @param ctx the context from the handler where the frame was read.
-     * @param data the payload of the frame.
+     * @param data the payload of the frame. If this buffer needs to be retained by the listener
+     *            they must make a copy.
      */
-    void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception;
+    void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception;
 
     /**
      * Handles an inbound {@code PUSH_PROMISE} frame. Only called if {@code END_HEADERS} encountered.

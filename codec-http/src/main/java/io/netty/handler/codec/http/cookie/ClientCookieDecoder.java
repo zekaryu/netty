@@ -140,7 +140,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
                 cookieBuilder.appendAttribute(nameBegin, nameEnd, valueBegin, valueEnd);
             }
         }
-        return cookieBuilder != null ? cookieBuilder.cookie() : null;
+        return cookieBuilder.cookie();
     }
 
     private static class CookieBuilder {

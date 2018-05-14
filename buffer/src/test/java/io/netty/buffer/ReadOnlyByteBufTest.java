@@ -202,7 +202,7 @@ public class ReadOnlyByteBufTest {
         ensureWritableIntStatusShouldFailButNotThrow(true);
     }
 
-    private static void ensureWritableIntStatusShouldFailButNotThrow(boolean force) {
+    private void ensureWritableIntStatusShouldFailButNotThrow(boolean force) {
         ByteBuf buf = buffer(1);
         ByteBuf readOnly = buf.asReadOnly();
         int result = readOnly.ensureWritable(1, force);

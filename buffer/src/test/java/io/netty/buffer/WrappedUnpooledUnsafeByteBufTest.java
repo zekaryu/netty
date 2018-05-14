@@ -15,10 +15,13 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteBufTest {
 

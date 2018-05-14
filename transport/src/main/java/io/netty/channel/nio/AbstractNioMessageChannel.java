@@ -172,19 +172,11 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     protected boolean closeOnReadError(Throwable cause) {
-        if (!isActive()) {
-            // If the channel is not active anymore for whatever reason we should not try to continue reading.
-            return true;
-        }
-        if (cause instanceof PortUnreachableException) {
-            return false;
-        }
-        if (cause instanceof IOException) {
-            // ServerChannel should not be closed even on IOException because it can often continue
-            // accepting incoming connections. (e.g. too many open files)
-            return !(this instanceof ServerChannel);
-        }
-        return true;
+        // ServerChannel should not be closed even on IOException because it can often continue
+        // accepting incoming connections. (e.g. too many open files)
+        return cause instanceof IOException &&
+                !(cause instanceof PortUnreachableException) &&
+                !(this instanceof ServerChannel);
     }
 
     /**

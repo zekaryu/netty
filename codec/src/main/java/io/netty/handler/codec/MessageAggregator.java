@@ -241,7 +241,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
             if (m instanceof DecoderResultProvider && !((DecoderResultProvider) m).decoderResult().isSuccess()) {
                 O aggregated;
-                if (m instanceof ByteBufHolder) {
+                if (m instanceof ByteBufHolder && ((ByteBufHolder) m).content().isReadable()) {
                     aggregated = beginAggregation(m, ((ByteBufHolder) m).content().retain());
                 } else {
                     aggregated = beginAggregation(m, EMPTY_BUFFER);

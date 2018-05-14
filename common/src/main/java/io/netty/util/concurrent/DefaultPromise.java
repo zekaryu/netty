@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.Signal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -39,8 +40,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
-    private static final Object SUCCESS = new Object();
-    private static final Object UNCANCELLABLE = new Object();
+    private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
+    private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
             new CancellationException(), DefaultPromise.class, "cancel(...)"));
 
@@ -307,11 +308,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return (V) result;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @param mayInterruptIfRunning this value has no effect in this implementation.
-     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {

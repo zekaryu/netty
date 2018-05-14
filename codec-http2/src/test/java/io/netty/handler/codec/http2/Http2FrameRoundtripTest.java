@@ -351,22 +351,26 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void pingFrameShouldMatch() throws Exception {
-        writer.writePing(ctx, false, 1234567, ctx.newPromise());
+        final ByteBuf data = buf("01234567".getBytes(UTF_8));
+
+        writer.writePing(ctx, false, data.slice(), ctx.newPromise());
         readFrames();
 
-        ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(long.class);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(listener).onPingRead(eq(ctx), captor.capture());
-        assertEquals(1234567, (long) captor.getValue());
+        assertEquals(data, captor.getValue());
     }
 
     @Test
     public void pingAckFrameShouldMatch() throws Exception {
-        writer.writePing(ctx, true, 1234567, ctx.newPromise());
+        final ByteBuf data = buf("01234567".getBytes(UTF_8));
+
+        writer.writePing(ctx, true, data.slice(), ctx.newPromise());
         readFrames();
 
-        ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(long.class);
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(listener).onPingAckRead(eq(ctx), captor.capture());
-        assertEquals(1234567, (long) captor.getValue());
+        assertEquals(data, captor.getValue());
     }
 
     @Test

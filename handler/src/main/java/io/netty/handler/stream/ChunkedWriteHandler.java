@@ -102,26 +102,28 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             return;
         }
         if (ctx.executor().inEventLoop()) {
-            resumeTransfer0(ctx);
+            try {
+                doFlush(ctx);
+            } catch (Exception e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Unexpected exception while sending chunks.", e);
+                }
+            }
         } else {
             // let the transfer resume on the next event loop round
             ctx.executor().execute(new Runnable() {
 
                 @Override
                 public void run() {
-                    resumeTransfer0(ctx);
+                    try {
+                        doFlush(ctx);
+                    } catch (Exception e) {
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("Unexpected exception while sending chunks.", e);
+                        }
+                    }
                 }
             });
-        }
-    }
-
-    private void resumeTransfer0(ChannelHandlerContext ctx) {
-        try {
-            doFlush(ctx);
-        } catch (Exception e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Unexpected exception while sending chunks.", e);
-            }
         }
     }
 
@@ -190,7 +192,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void doFlush(final ChannelHandlerContext ctx) {
+    private void doFlush(final ChannelHandlerContext ctx) throws Exception {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             discard(null);
@@ -299,8 +301,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 ctx.flush();
                 requiresFlush = false;
             } else {
-                this.currentWrite = null;
                 ctx.write(pendingMessage, currentWrite.promise);
+                this.currentWrite = null;
                 requiresFlush = true;
             }
 
@@ -315,7 +317,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static void closeInput(ChunkedInput<?> chunks) {
+    static void closeInput(ChunkedInput<?> chunks) {
         try {
             chunks.close();
         } catch (Throwable t) {
@@ -344,7 +346,12 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
             }
-            progress(total, total);
+
+            if (promise instanceof ChannelProgressivePromise) {
+                // Now we know what the total is.
+                ((ChannelProgressivePromise) promise).tryProgress(total, total);
+            }
+
             promise.trySuccess();
         }
 

@@ -15,7 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -26,10 +25,7 @@ public final class DnsServerAddressStreamProviders {
     // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
     // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
     private static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
-            // If on windows just use the DefaultDnsServerAddressStreamProvider.INSTANCE as otherwise
-            // we will log some error which may be confusing.
-            PlatformDependent.isWindows() ? DefaultDnsServerAddressStreamProvider.INSTANCE :
-                    UnixResolverDnsServerAddressStreamProvider.parseSilently();
+            UnixResolverDnsServerAddressStreamProvider.parseSilently();
 
     private DnsServerAddressStreamProviders() {
     }

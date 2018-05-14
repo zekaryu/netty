@@ -35,8 +35,6 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import static java.lang.Math.min;
-
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
  * outbound write requests.
@@ -113,11 +111,12 @@ public final class ChannelOutboundBuffer {
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
+            tailEntry = entry;
         } else {
             Entry tail = tailEntry;
             tail.next = entry;
+            tailEntry = entry;
         }
-        tailEntry = entry;
         if (unflushedEntry == null) {
             unflushedEntry = entry;
         }
@@ -368,26 +367,6 @@ public final class ChannelOutboundBuffer {
      * </p>
      */
     public ByteBuffer[] nioBuffers() {
-        return nioBuffers(Integer.MAX_VALUE, Integer.MAX_VALUE);
-    }
-
-    /**
-     * Returns an array of direct NIO buffers if the currently pending messages are made of {@link ByteBuf} only.
-     * {@link #nioBufferCount()} and {@link #nioBufferSize()} will return the number of NIO buffers in the returned
-     * array and the total number of readable bytes of the NIO buffers respectively.
-     * <p>
-     * Note that the returned array is reused and thus should not escape
-     * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
-     * Refer to {@link NioSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
-     * </p>
-     * @param maxCount The maximum amount of buffers that will be added to the return value.
-     * @param maxBytes A hint toward the maximum number of bytes to include as part of the return value. Note that this
-     *                 value maybe exceeded because we make a best effort to include at least 1 {@link ByteBuffer}
-     *                 in the return value to ensure write progress is made.
-     */
-    public ByteBuffer[] nioBuffers(int maxCount, long maxBytes) {
-        assert maxCount > 0;
-        assert maxBytes > 0;
         long nioBufferSize = 0;
         int nioBufferCount = 0;
         final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
@@ -400,14 +379,13 @@ public final class ChannelOutboundBuffer {
                 final int readableBytes = buf.writerIndex() - readerIndex;
 
                 if (readableBytes > 0) {
-                    if (maxBytes - readableBytes < nioBufferSize && nioBufferCount != 0) {
-                        // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least one entry
-                        // we stop populate the ByteBuffer array. This is done for 2 reasons:
-                        // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one writev(...) call
-                        // and so will return 'EINVAL', which will raise an IOException. On Linux it may work depending
-                        // on the architecture and kernel but to be safe we also enforce the limit here.
-                        // 2. There is no sense in putting more data in the array than is likely to be accepted by the
-                        // OS.
+                    if (Integer.MAX_VALUE - readableBytes < nioBufferSize) {
+                        // If the nioBufferSize + readableBytes will overflow an Integer we stop populate the
+                        // ByteBuffer array. This is done as bsd/osx don't allow to write more bytes then
+                        // Integer.MAX_VALUE with one writev(...) call and so will return 'EINVAL', which will
+                        // raise an IOException. On Linux it may work depending on the
+                        // architecture and kernel but to be safe we also enforce the limit here.
+                        // This said writing more the Integer.MAX_VALUE is not a good idea anyway.
                         //
                         // See also:
                         // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
@@ -418,9 +396,9 @@ public final class ChannelOutboundBuffer {
                     int count = entry.count;
                     if (count == -1) {
                         //noinspection ConstantValueVariableUse
-                        entry.count = count = buf.nioBufferCount();
+                        entry.count = count =  buf.nioBufferCount();
                     }
-                    int neededSpace = min(maxCount, nioBufferCount + count);
+                    int neededSpace = nioBufferCount + count;
                     if (neededSpace > nioBuffers.length) {
                         nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
                         NIO_BUFFERS.set(threadLocalMap, nioBuffers);
@@ -432,7 +410,7 @@ public final class ChannelOutboundBuffer {
                             // derived buffer
                             entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
                         }
-                        nioBuffers[nioBufferCount++] = nioBuf;
+                        nioBuffers[nioBufferCount ++] = nioBuf;
                     } else {
                         ByteBuffer[] nioBufs = entry.bufs;
                         if (nioBufs == null) {
@@ -440,18 +418,7 @@ public final class ChannelOutboundBuffer {
                             // of Object allocation
                             entry.bufs = nioBufs = buf.nioBuffers();
                         }
-                        for (int i = 0; i < nioBufs.length && nioBufferCount < maxCount; ++i) {
-                            ByteBuffer nioBuf = nioBufs[i];
-                            if (nioBuf == null) {
-                                break;
-                            } else if (!nioBuf.hasRemaining()) {
-                                continue;
-                            }
-                            nioBuffers[nioBufferCount++] = nioBuf;
-                        }
-                    }
-                    if (nioBufferCount == maxCount) {
-                        break;
+                        nioBufferCount = fillBufferArray(nioBufs, nioBuffers, nioBufferCount);
                     }
                 }
             }
@@ -461,6 +428,16 @@ public final class ChannelOutboundBuffer {
         this.nioBufferSize = nioBufferSize;
 
         return nioBuffers;
+    }
+
+    private static int fillBufferArray(ByteBuffer[] nioBufs, ByteBuffer[] nioBuffers, int nioBufferCount) {
+        for (ByteBuffer nioBuf: nioBufs) {
+            if (nioBuf == null) {
+                break;
+            }
+            nioBuffers[nioBufferCount ++] = nioBuf;
+        }
+        return nioBufferCount;
     }
 
     private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {

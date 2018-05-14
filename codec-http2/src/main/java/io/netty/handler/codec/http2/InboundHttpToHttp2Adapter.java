@@ -49,9 +49,6 @@ public class InboundHttpToHttp2Adapter extends ChannelInboundHandlerAdapter {
         }
     }
 
-    // note that this may behave strangely when used for the initial upgrade
-    // message when using h2c, since that message is ineligible for flow
-    // control, but there is not yet an API for signaling that.
     static void handle(ChannelHandlerContext ctx, Http2Connection connection,
                               Http2FrameListener listener, FullHttpMessage message) throws Http2Exception {
         try {

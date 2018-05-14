@@ -30,7 +30,7 @@ public class EmptyHeaders<K, V, T extends Headers<K, V, T>> implements Headers<K
 
     @Override
     public V get(K name, V defaultValue) {
-        return defaultValue;
+        return null;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class EmptyHeaders<K, V, T extends Headers<K, V, T>> implements Headers<K
 
     @Override
     public V getAndRemove(K name, V defaultValue) {
-        return defaultValue;
+        return null;
     }
 
     @Override

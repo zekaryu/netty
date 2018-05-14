@@ -99,7 +99,7 @@ public class OcspTest {
         testClientOcspNotEnabled(SslProvider.OPENSSL_REFCNT);
     }
 
-    private static void testClientOcspNotEnabled(SslProvider sslProvider) throws Exception {
+    private void testClientOcspNotEnabled(SslProvider sslProvider) throws Exception {
         SslContext context = SslContextBuilder.forClient()
                 .sslProvider(sslProvider)
                 .build();
@@ -126,7 +126,7 @@ public class OcspTest {
         testServerOcspNotEnabled(SslProvider.OPENSSL_REFCNT);
     }
 
-    private static void testServerOcspNotEnabled(SslProvider sslProvider) throws Exception {
+    private void testServerOcspNotEnabled(SslProvider sslProvider) throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         try {
             SslContext context = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -161,7 +161,7 @@ public class OcspTest {
     /**
      * The Server provides an OCSP staple and the Client accepts it.
      */
-    private static void testClientAcceptingOcspStaple(SslProvider sslProvider) throws Exception {
+    private void testClientAcceptingOcspStaple(SslProvider sslProvider) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
             @Override
@@ -207,7 +207,7 @@ public class OcspTest {
     /**
      * The Server provides an OCSP staple and the Client rejects it.
      */
-    private static void testClientRejectingOcspStaple(SslProvider sslProvider) throws Exception {
+    private void testClientRejectingOcspStaple(SslProvider sslProvider) throws Exception {
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -250,7 +250,7 @@ public class OcspTest {
     /**
      * The server has OCSP stapling enabled but doesn't provide a staple.
      */
-    private static void testServerHasNoStaple(SslProvider sslProvider) throws Exception {
+    private void testServerHasNoStaple(SslProvider sslProvider) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
             @Override
@@ -297,7 +297,7 @@ public class OcspTest {
      *
      * The exception should bubble up on the client side and the connection should get closed.
      */
-    private static void testClientException(SslProvider sslProvider) throws Exception {
+    private void testClientException(SslProvider sslProvider) throws Exception {
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -494,8 +494,6 @@ public class OcspTest {
     }
 
     private static final class OcspTestException extends IllegalStateException {
-        private static final long serialVersionUID = 4516426833250228159L;
-
         public OcspTestException(String message) {
             super(message);
         }

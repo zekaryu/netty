@@ -252,8 +252,6 @@ public class Http2Exception extends Exception {
     }
 
     public static final class HeaderListSizeException extends StreamException {
-        private static final long serialVersionUID = -8807603212183882637L;
-
         private final boolean decode;
 
         HeaderListSizeException(int streamId, Http2Error error, String message, boolean decode) {

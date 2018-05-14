@@ -16,13 +16,15 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.util.internal.UnstableApi;
 
 /**
  * HTTP/2 PING Frame.
  */
 @UnstableApi
-public interface Http2PingFrame extends Http2Frame {
+public interface Http2PingFrame extends Http2Frame, ByteBufHolder {
 
     /**
      * When {@code true}, indicates that this ping is a ping response.
@@ -32,5 +34,6 @@ public interface Http2PingFrame extends Http2Frame {
     /**
      * Returns the eight byte opaque data.
      */
-    long content();
+    @Override
+    ByteBuf content();
 }

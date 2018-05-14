@@ -17,7 +17,6 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -46,9 +45,6 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_ACQUIRE_AND_RELEASE_ONLY, ACQUIRE_AND_RELEASE_ONLY);
         }
-
-        ResourceLeakDetector.addExclusions(
-                AdvancedLeakAwareByteBuf.class, "touch", "recordLeakNonRefCountingOperation");
     }
 
     AdvancedLeakAwareByteBuf(ByteBuf buf, ResourceLeakTracker<ByteBuf> leak) {

@@ -40,6 +40,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -288,11 +289,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     @SuppressWarnings("unchecked")
     public <T> T readInbound() {
-        T message = (T) poll(inboundMessages);
-        if (message != null) {
-            ReferenceCountUtil.touch(message, "Caller of readInbound() will handle the message from this point");
-        }
-        return message;
+        return (T) poll(inboundMessages);
     }
 
     /**
@@ -300,11 +297,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     @SuppressWarnings("unchecked")
     public <T> T readOutbound() {
-        T message =  (T) poll(outboundMessages);
-        if (message != null) {
-            ReferenceCountUtil.touch(message, "Caller of readOutbound() will handle the message from this point.");
-        }
-        return message;
+        return (T) poll(outboundMessages);
     }
 
     /**

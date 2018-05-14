@@ -48,7 +48,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private final ByteBufAllocator alloc;
     private final boolean direct;
-    private final ComponentList components;
+    private final List<Component> components;
     private final int maxNumComponents;
 
     private boolean freed;
@@ -110,8 +110,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         setIndex(0, capacity());
     }
 
-    private static ComponentList newList(int maxNumComponents) {
-        return new ComponentList(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
+    private static List<Component> newList(int maxNumComponents) {
+        return new ArrayList<Component>(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
     }
 
     // Special constructor used by WrappedCompositeByteBuf
@@ -120,7 +120,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         direct = false;
         maxNumComponents = 0;
-        components = null;
+        components = Collections.emptyList();
     }
 
     /**
@@ -486,16 +486,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (numComponents == 0) {
             return this;
         }
-        int endIndex = cIndex + numComponents;
+        List<Component> toRemove = components.subList(cIndex, cIndex + numComponents);
         boolean needsUpdate = false;
-        for (int i = cIndex; i < endIndex; ++i) {
-            Component c = components.get(i);
+        for (Component c: toRemove) {
             if (c.length > 0) {
                 needsUpdate = true;
             }
             c.freeIfNecessary();
         }
-        components.removeRange(cIndex, endIndex);
+        toRemove.clear();
 
         if (needsUpdate) {
             // Only need to call updateComponentOffsets if the length was > 0
@@ -1334,7 +1333,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        ByteBuf dst = allocBuffer(length);
+        ByteBuf dst = Unpooled.buffer(length);
         if (length != 0) {
             copyTo(index, length, toComponentIndex(index), dst);
         }
@@ -1558,7 +1557,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             c.freeIfNecessary();
         }
 
-        components.removeRange(cIndex + 1, endCIndex);
+        components.subList(cIndex + 1, endCIndex).clear();
         components.set(cIndex, new Component(consolidated));
         updateComponentOffsets(cIndex);
         return this;
@@ -1577,9 +1576,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
-            int size = components.size();
-            for (int i = 0; i < size; i++) {
-                components.get(i).freeIfNecessary();
+            for (Component c: components) {
+                c.freeIfNecessary();
             }
             components.clear();
             setIndex(0, 0);
@@ -1592,7 +1590,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int i = 0; i < firstComponentId; i ++) {
             components.get(i).freeIfNecessary();
         }
-        components.removeRange(0, firstComponentId);
+        components.subList(0, firstComponentId).clear();
 
         // Update indexes and markers.
         Component first = components.get(0);
@@ -1614,9 +1612,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
-            int size = components.size();
-            for (int i = 0; i < size; i++) {
-                components.get(i).freeIfNecessary();
+            for (Component c: components) {
+                c.freeIfNecessary();
             }
             components.clear();
             setIndex(0, 0);
@@ -1629,19 +1626,18 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int i = 0; i < firstComponentId; i ++) {
             components.get(i).freeIfNecessary();
         }
+        components.subList(0, firstComponentId).clear();
 
         // Remove or replace the first readable component with a new slice.
-        Component c = components.get(firstComponentId);
+        Component c = components.get(0);
         int adjustment = readerIndex - c.offset;
         if (adjustment == c.length) {
             // new slice would be empty, so remove instead
-            firstComponentId++;
+            components.remove(0);
         } else {
             Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
-            components.set(firstComponentId, newC);
+            components.set(0, newC);
         }
-
-        components.removeRange(0, firstComponentId);
 
         // Update indexes and markers.
         updateComponentOffsets(0);
@@ -1974,19 +1970,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         @Override
         public void remove() {
             throw new UnsupportedOperationException("Read-Only");
-        }
-    }
-
-    private static final class ComponentList extends ArrayList<Component> {
-
-        ComponentList(int initialCapacity) {
-            super(initialCapacity);
-        }
-
-        // Expose this methods so we not need to create a new subList just to remove a range of elements.
-        @Override
-        public void removeRange(int fromIndex, int toIndex) {
-            super.removeRange(fromIndex, toIndex);
         }
     }
 }

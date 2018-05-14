@@ -25,7 +25,6 @@ import java.util.Date;
  */
 public class CharSequenceValueConverter implements ValueConverter<CharSequence> {
     public static final CharSequenceValueConverter INSTANCE = new CharSequenceValueConverter();
-    private static final AsciiString TRUE_ASCII = new AsciiString("true");
 
     @Override
     public CharSequence convertObject(Object value) {
@@ -67,7 +66,10 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public boolean convertToBoolean(CharSequence value) {
-        return AsciiString.contentEqualsIgnoreCase(value, TRUE_ASCII);
+        if (value instanceof AsciiString) {
+            return ((AsciiString) value).parseBoolean();
+        }
+        return Boolean.parseBoolean(value.toString());
     }
 
     @Override
@@ -119,7 +121,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertTimeMillis(long value) {
-        return DateFormatter.format(new Date(value));
+        return String.valueOf(value);
     }
 
     @Override
