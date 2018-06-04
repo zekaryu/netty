@@ -113,8 +113,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    static final long MAX_SCHEDULED_DAYS = 365 * 3;
-
     /**
      * The NIO {@link Selector}.
      */
@@ -181,8 +179,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             return new SelectorTuple(unwrappedSelector);
         }
 
-        final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
-
         Object maybeSelectorImplClass = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
@@ -208,6 +204,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
+        final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
         Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
@@ -823,14 +820,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             selector.selectNow();
         } catch (Throwable t) {
             logger.warn("Failed to update SelectionKeys.", t);
-        }
-    }
-
-    @Override
-    protected void validateScheduled(long amount, TimeUnit unit) {
-        long days = unit.toDays(amount);
-        if (days > MAX_SCHEDULED_DAYS) {
-            throw new IllegalArgumentException("days: " + days + " (expected: < " + MAX_SCHEDULED_DAYS + ')');
         }
     }
 }

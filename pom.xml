@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.25.Final-SNAPSHOT</version>
+  <version>4.1.26.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -225,7 +225,7 @@
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.1</conscrypt.version>
+    <conscrypt.version>1.1.2</conscrypt.version>
     <conscrypt.classifier />
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
@@ -637,10 +637,10 @@
                 </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
-                    x86_64 JDK must be used.
+                    x86_64/AARCH64 JDK must be used.
                   </regexMessage>
                   <property>os.detected.arch</property>
-                  <regex>^x86_64$</regex>
+                  <regex>^(x86_64|aarch_64)$</regex>
                 </requireProperty>
               </rules>
             </configuration>
@@ -864,6 +864,8 @@
             </property>
           </properties>
           <jvm>${testJavaHome}/bin/java</jvm>
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+          <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
